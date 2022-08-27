@@ -1,5 +1,5 @@
-library(sf)
-library(landscapemetrics)
+# Forest change analysis for Southeast Michigan region
+
 # The objective of this project is to analyze the forest cover change in Southeast Michigan for the last thirty years
 # The analysis was conducted for 131 minor divisions (Townships and Cities) in Southeast Michigan (SEM).
 # I inherited metrics of forest fragmentation from Landscape Metrics developed by Kevin McGarigal
