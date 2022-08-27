@@ -1,0 +1,177 @@
+library(sf)
+library(landscapemetrics)
+# The objective of this project is to analyze the forest cover change in Southeast Michigan for the last thirty years
+# The analysis was conducted for 131 minor divisions (Townships and Cities) in Southeast Michigan (SEM).
+# I inherited metrics of forest fragmentation from Landscape Metrics developed by Kevin McGarigal
+# I used a remotely sensed forest cover data for the year 1985, 2005, and 2015 to conduct the analysis
+# However, the challenge was ordinary computers do not have sufficient memory to process this big dataset at once
+# Given the volume of data to be processed, I chose to partition the entire landscape of SEM by the boundary of each minor divisions
+# I conducted the analysis for each minor division and then merged the final results to produce one big metrics
+# SEM - refers to Southeast Michigan and md - refers to minor divisions
+
+# Below are some of the R packages I used for my analysis
+library(sf)
+library(landscapemetrics)
+library(raster)
+library(rgdal)
+library(rgeos)
+library(data.table)
+
+# Upload forest raster data for each time period (1985, 2005, 2015)
+
+raster1985 <- raster("D:/forest/SE_MI_1985.tif")
+raster2005 <- raster("D:/forest/SE_MI_2005.tif")
+raster2015 <- raster("D:/forest/SE_MI_2015.tif")
+
+# upload a shapefile containing boundaries of each md and counties in SEM
+divisions <- as_Spatial(st_transform(st_read("D:/Detroit project/New folder/minor_divisions.shp")
+                     , crs = 4326))
+counties <- as_Spatial(st_transform(st_read("D:/Detroit project/New folder/study_area_boundary.shp")
+                                    , crs = 4326))
+
+## Below is a foor loop code I developed to separately conduct the analysis for each md 
+# Forest Patch density for 2005
+
+setwd ("D:/forest_nov3/2005/PD")
+
+for (i in divisions$FIPS){ 
+  md <- divisions[divisions$FIPS == i,] # Select minor divisions based on their FIPS code
+  md <- spTransform(md, CRS(proj4string(raster2005))) # transform the geographic projections of selected md to the ones associated with the raster data
+  clip2 <- crop(raster2005, md) # clip the entire raster by the boundary of selected md
+  mask2 <- mask(x = clip2, mask = md) # Mask the clipped raster by the boundary of selected md
+  mask2[mask2 == 2|mask2 == 3] <- NA # Consider those non-forest land use types as "Not applicable" 
+  pd <-lsm_l_pd (mask2) # Compute the landscape patch density metrics
+  write.csv(pd, paste(i)) # Save the output as CSV file
+
+}
+
+## Percentage of land cover for 2005 # Repeat the same for another metrics - Percentage of land cover (PLAND)
+
+setwd ("D:/forest_nov3/2005/PLAND")
+
+for (i in divisions$FIPS){
+  md <- divisions[divisions$FIPS == i,]
+  md <- spTransform(md, CRS(proj4string(raster2005)))
+  clip2 <- crop(raster2005, md)
+  mask2 <- mask(x = clip2, mask = md)
+  pland <-lsm_c_pland (mask2) 
+  write.csv(pland, paste(i))
+}
+
+###################################################
+# Repeat the above for the year 2015
+## Patch density for 2015 
+
+
+setwd ("D:/forest_nov3/2015/PD")
+
+for (i in divisions$FIPS){
+  md <- divisions[divisions$FIPS == i,]
+  md <- spTransform(md, CRS(proj4string(raster2015)))
+  clip2 <- crop(raster2015, md)
+  mask2 <- mask(x = clip2, mask = md)
+  mask2[mask2 == 2|mask2 == 3] <- NA
+  pd <-lsm_l_pd (mask2)
+  write.csv(pd, paste(i))
+  
+}
+
+
+## Percentage of land cover for 2015 
+
+setwd ("D:/forest_nov3/2015/PLAND")
+
+for (i in divisions$FIPS){
+  md <- divisions[divisions$FIPS == i,]
+  md <- spTransform(md, CRS(proj4string(raster2015)))
+  clip2 <- crop(raster2015, md)
+  mask2 <- mask(x = clip2, mask = md)
+  pland <-lsm_c_pland (mask2) 
+  write.csv(pland, paste(i))
+}
+
+
+######################################################
+
+# Merge the metrics for patch density and percentage of land cover for the year 2005
+
+library(data.table)
+library(dplyr)
+library(readr)
+
+
+# Construct one metrics table for year 2005
+
+# Patch density for 2005
+setwd("D:/forest_nov3/2005/PD")
+
+file.list <- list.files() # list all the files in the director above and save it as file.list
+df.list <- sapply(file.list, read.csv, simplify=FALSE) # construct a dataframe that contains all the csv files in files.list and save it as df.list
+df <- rbindlist(df.list, id = "ID") # bind all the rows in df.list and save it as df
+write.csv(df, paste("combined","PD", "2005")) # save df as a CSV file
+
+
+# Repeat the above for another metrics - percentage of land cover
+ setwd("D:/forest_nov3/2005/PLAND")
+
+file.list <- list.files()
+df.list <- sapply(file.list, read.csv, simplify=FALSE)
+df <- rbindlist(df.list, id = "ID")
+write.csv(df, paste("combined","PLAND", "2005"))
+
+
+# Construct one metrics table for year 2015 - Repeat what is the done for 2005
+
+setwd("D:/forest_nov3/2015/PD") # Patch density for 2015
+
+file.list <- list.files()
+df.list <- sapply(file.list, read.csv, simplify=FALSE)
+df <- rbindlist(df.list, id = "ID")
+write.csv(df, paste("combined","PD", "2015"))
+
+
+setwd("D:/forest_nov3/2015/PLAND") # PLAND for 2015
+
+file.list <- list.files()
+df.list <- sapply(file.list, read.csv, simplify=FALSE)
+df <- rbindlist(df.list, id = "ID")
+write.csv(df, paste("combined","PLAND", "2015"))
+
+# create one table merging all the metric data (years and minor divisions)
+
+# import tables for 2005
+
+pd_2005 <- read.csv("D:/forest_nov3/2005/PD/combined PD 2005")
+pland_2005 <- read.csv("D:/forest_nov3/2005/PLAND/combined PLAND 2005")
+pland_2005 <- pland_2005[pland_2005$class == 1,]
+
+metrics_2005 <- cbind (pd_2005, pland_2005)
+metrics_2005 <- metrics_2005[,c(2,9,18)]
+colnames (metrics_2005) <- c("FIPSCODE", "PD_2005", "PLAND_2005")
+
+setwd("D:/forest_nov3")
+write.csv(metrics_2005,"metrics2005.csv")
+
+
+# import tables for 2015
+
+pd_2015 <- read.csv("D:/forest_nov3/2015/PD/combined PD 2015")
+pland_2015 <- read.csv("D:/forest_nov3/2015/PLAND/combined PLAND 2015")
+pland_2015 <- pland_2015[pland_2015$class == 1,]
+
+metrics_2015 <- cbind (pd_2015, pland_2015)
+metrics_2015 <- metrics_2015[,c(2,9,18)]
+colnames (metrics_2015) <- c("FIPSCODE", "PD_2015", "PLAND_2015")
+
+setwd("D:/forest_nov3")
+write.csv(metrics_2015,"metrics2015.csv")
+
+
+# change metrics 2005 to 2015
+
+allData <- merge (metrics_2005, metrics_2015, by = "FIPSCODE") # merge all the data by the FIPS code
+allData$PD_0515 <- allData$PD_2015 - allData$PD_2005 # Substract the 2005 patch density values from 2015 values
+allData$PLAND_0515 <- allData$PLAND_2015 - allData$PLAND_2005 # Substract the 2005 percentage of land values from 2015 values
+
+setwd("D:/forest_nov3")
+write.csv(allData,"change_metrics0515.csv") # Save the final metrics as CSV file
