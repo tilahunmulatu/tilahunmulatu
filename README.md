@@ -1,5 +1,5 @@
 - 👋 Hi, I’m @tilahunmulatu
-- 👀 I’m interested in spatial data analysis (remote sensing, lu/lc change analysis, spatio-temporal modelling)
+- 👀 I’m interested in spatial and non-spatial data analysis including remote sensing, lu/lc change analysis, spatio-temporal modelling, decision support systems
 - 🌱 I’m currently learning data managment tools (SQL) and Python programming
 - 💞️ I’m looking to collaborate on developing programming codes for spatial data analysis
 - 📫 How to reach me email - tfikadu@umich.edu, tilahunmulatu@yahoo.com
